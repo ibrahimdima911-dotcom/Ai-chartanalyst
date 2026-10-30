@@ -1,0 +1,65 @@
+import os
+import streamlit as st
+from PIL import Image
+from google import genai
+
+# Page configuration
+st.set_page_config(page_title="AI Chart Analyst", layout="wide")
+st.title("📈 AI Technical Chart Analyst")
+st.write("Upload a chart screenshot (TradingView/MT5) for technical structure and setup analysis.")
+
+# Sidebar for API Key input
+with st.sidebar:
+    st.header("Configuration")
+    api_key = st.text_input("Enter your Gemini API Key:", type="password")
+    st.markdown("[Get a free Gemini API Key](https://aistudio.google.com/)")
+
+# File uploader
+uploaded_file = st.file_uploader("Choose a chart image...", type=["png", "jpg", "jpeg"])
+
+if uploaded_file and api_key:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.image(image, caption="Uploaded Chart", use_container_width=True)
+
+    with col2:
+        if st.button("Analyze Chart", type="primary"):
+            with st.spinner("Analyzing market structure and liquidity zones..."):
+                try:
+                    # Initialize Gemini Client
+                    client = genai.Client(api_key=api_key)
+                    
+                    # System Prompt for Technical Analysis
+                    prompt = """
+                    You are an expert quantitative technical analyst specializing in Price Action, ICT/SMC concepts, and classical chart patterns.
+                    
+                    Analyze the uploaded chart image and provide a structured report covering:
+                    
+                    1. **Market Structure:** Identify the current trend (Uptrend, Downtrend, or Ranging), Break of Structure (BOS), or Change of Character (CHoCH) if visible.
+                    2. **Key Levels & Zones:** Identify major Support/Resistance, Supply/Demand zones, or Fair Value Gaps (FVGs) / Liquidity Pools.
+                    3. **Chart Patterns / Candlestick Formations:** Note any prominent patterns (e.g., Head & Shoulders, Double Top/Bottom, Pin Bars, Engulfing Candles).
+                    4. **Trade Hypothesis:** 
+                       - Directional Bias (Bullish / Bearish / Neutral)
+                       - Invalidation Level (Stop Loss area)
+                       - Potential Target / Key Reaction Zone (Take Profit area)
+                    
+                    Keep the tone objective, precise, and concise. Highlight that this is for educational/analysis purposes only.
+                    """
+                    
+                    # Call Gemini 1.5 Flash Vision
+                    response = client.models.generate_content(
+                        model='gemini-1.5-flash',
+                        contents=[prompt, image]
+                    )
+                    
+                    st.success("Analysis Complete!")
+                    st.markdown(response.text)
+                    
+                except Exception as e:
+                    st.error(f"Error analyzing image: {e}")
+
+elif not api_key and uploaded_file:
+    st.warning("Please enter your Gemini API Key in the sidebar to proceed.")
